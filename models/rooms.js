@@ -73,7 +73,7 @@ class Rooms {
                 const pubKey = PublicKey.fromString(room.players[i])
                 const encryptedRoleString = PolyAES.withKey(hexKey).encrypt(shuffledRoles[i])
                 const encryptedHexKey = await pubKey.encrypt(Buffer.from(hexKey))
-                const encryptedHexKeyString = encryptedHexKey.toString()
+                const encryptedHexKeyString = Buffer.from(encryptedHexKey).toString()
                 const messagePayload = (shuffledRoles[i] === "MAFIA") ? JSON.stringify({
                     encryptedRole: encryptedRoleString,
                     encryptedHexKey: encryptedHexKeyString,
