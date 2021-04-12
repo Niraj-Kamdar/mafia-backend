@@ -35,6 +35,11 @@ function errorHandler(callback) {
 app.use(bodyParser.json());
 app.use(morgan("combined"));
 app.use(cors());
+app.use(async(req, res, next) => {
+    hubConfig = await getHub(identity);
+    models.rooms = new modelsFactory.Rooms(identity, hubConfig.client, gameThread, bree);
+    next();
+})
 
 // Create new room
 app.post("/rooms", errorHandler(async(req, res, next) => {
