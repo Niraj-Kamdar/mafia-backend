@@ -162,6 +162,16 @@ app.put("/rooms/:roomId/heal", errorHandler(async(req, res, next) => {
     }
 }))
 
+app.get("/rooms/:roomId/getRole", errorHandler(async(req, res, next) => {
+    const player = await modelsFactory.playerState.getPlayer(req.query.playerId)
+    const payload = {role: player.role}
+    if(player.role === "MAFIA"){
+        const threads = await modelsFactory.threadLookUp.getThreads(hubConfig.client, gameThread, req.params.roomId)
+        payload.mafiaThread = threads.mafiaThread
+    }
+    res.json(payload)
+}))
+
 app.get("/rooms/:roomId", errorHandler(async(req, res, next) => {
     await models.rooms.updateRoomPhase(req.params.roomId)
     res.send("success")
