@@ -1,6 +1,6 @@
 const shuffleSeed = require('shuffle-seed');
-const {PolyRand, PolyAES} = require('poly-crypto');
-const {PublicKey} = require('@textile/hub');
+// const {PolyRand, PolyAES} = require('poly-crypto');
+// const {PublicKey} = require('@textile/hub');
 const threadLookUp = require("./threadLookUp");
 const playerState = require("./playerState");
 const utils = require("./utils");
@@ -60,27 +60,30 @@ class Rooms {
             await utils.initCollections(this.client, gameStateThread, [{name: "playerState"}]);
             const players = []
             const messages = []
+            // todo: figure out encryption
             for (let i = 0; i < 8; i++) {
-                const hexKey = PolyRand.hex(64)
+                // const hexKey = PolyRand.hex(64)
                 const player = {
                     _id: `${i}`,
                     publicId: room.players[i],
                     role: shuffledRoles[i],
-                    key: hexKey,
+                    // key: hexKey,
                     isAlive: true
                 }
                 players.push(player)
-                const pubKey = PublicKey.fromString(room.players[i])
-                const encryptedRoleString = PolyAES.withKey(hexKey).encrypt(shuffledRoles[i])
-                const encryptedHexKey = await pubKey.encrypt(Buffer.from(hexKey))
-                const encryptedHexKeyString = Buffer.from(encryptedHexKey).toString()
+                // const pubKey = PublicKey.fromString(room.players[i])
+                // const encryptedRoleString = PolyAES.withKey(hexKey).encrypt(shuffledRoles[i])
+                // const encryptedHexKey = await pubKey.encrypt(Buffer.from(hexKey))
+                // const encryptedHexKeyString = Buffer.from(encryptedHexKey).toString()
                 const messagePayload = (shuffledRoles[i] === "MAFIA") ? JSON.stringify({
-                    encryptedRole: encryptedRoleString,
-                    encryptedHexKey: encryptedHexKeyString,
-                    mafiaThread: threads.mafiaThread
+                    // encryptedRole: encryptedRoleString,
+                    // encryptedHexKey: encryptedHexKeyString,
+                    mafiaThread: threads.mafiaThread,
+                    role: shuffledRoles[i]
                 }) : JSON.stringify({
-                    encryptedRole: encryptedRoleString,
-                    encryptedHexKey: encryptedHexKeyString
+                    // encryptedRole: encryptedRoleString,
+                    // encryptedHexKey: encryptedHexKeyString,
+                    role: shuffledRoles[i]
                 })
                 const message = {
                     subject: "RoleAssignment",
