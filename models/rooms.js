@@ -1,16 +1,16 @@
+const {ThreadID} = require("@textile/hub");
 const shuffleSeed = require('shuffle-seed');
 // const {PolyRand, PolyAES} = require('poly-crypto');
 // const {PublicKey} = require('@textile/hub');
 const threadLookUp = require("./threadLookUp");
 const playerState = require("./playerState");
 const utils = require("./utils");
-const {ThreadID} = require("@textile/hub");
 
 class Rooms {
-    constructor(identity, client, threadId, bree) {
+    constructor(identity, client, threadIdString, bree) {
         this.identity = identity;
         this.client = client;
-        this.threadId = threadId;
+        this.threadId = ThreadID.fromString(threadIdString);
         this.bree = bree;
     }
 
@@ -35,7 +35,7 @@ class Rooms {
             mafiaThread,
             gameStateThread
         })
-        await utils.initCollections(this.client, ThreadID.fromString(villagerThread), [{name: "chat"}]);
+        await utils.initCollections(this.client, villagerThread, [{name: "chat"}]);
         return {roomId}
     }
 
@@ -52,12 +52,12 @@ class Rooms {
             const roles = ["MAFIA", "MAFIA", "MAFIA", "VILLAGER", "VILLAGER", "VILLAGER", "DOCTOR", "DETECTIVE"]
             const timestamp = new Date().getTime();
             const shuffledRoles = shuffleSeed.shuffle(roles, timestamp)
-            const threads = await threadLookUp.getThreads(this.client, this.threadId, roomId);
-            const villagerThread = ThreadID.fromString(threads.villagerThread)
-            const gameStateThread = ThreadID.fromString(threads.gameStateThread)
+            const threads = await threadLookUp.getThreads(this.client, this.threadId.toString(), roomId);
+            // const villagerThread = ThreadID.fromString(threads.villagerThread)
+            // const gameStateThread = ThreadID.fromString(threads.gameStateThread)
 
-            await utils.initCollections(this.client, villagerThread, [{name: "chat"}]);
-            await utils.initCollections(this.client, gameStateThread, [{name: "playerState"}]);
+            await utils.initCollections(this.client, threads.villagerThread, [{name: "chat"}]);
+            await utils.initCollections(this.client, threads.gameStateThread, [{name: "playerState"}]);
             const players = []
             const messages = []
             // todo: figure out encryption
@@ -94,8 +94,8 @@ class Rooms {
                 }
                 messages.push(message)
             }
-            const playerIds = await playerState.addPlayers(this.client, gameStateThread, players)
-            const messageIds = await this.client.create(villagerThread, 'chat', messages)
+            const playerIds = await playerState.addPlayers(this.client, threads.gameStateThread, players)
+            const messageIds = await this.client.create(ThreadID.fromString(threads.villagerThread), 'chat', messages)
             await this.updateRoomPhase(roomId)
         }
         if (room.phase !== "WAITING" && room.players.length === 8) {

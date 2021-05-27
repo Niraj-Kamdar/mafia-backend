@@ -12,19 +12,19 @@ const modelsFactory = require("./models");
 
 const app = express();
 const identity = hub.PrivateKey.fromString(process.env.IDENTITY);
-const gameThread = hub.ThreadID.fromString(process.env.GAME_THREAD);
+const gameThreadString = process.env.GAME_THREAD;
 
 const logger = new Cabin();
 const bree = new Bree({
     logger
 });
-const graceful = new Graceful({ brees: [bree] });
+const graceful = new Graceful({brees: [bree]});
 
 let hubConfig = {};
 let models = {};
 
 function errorHandler(callback) {
-    if(hubConfig && models){
+    if (hubConfig && models) {
         return function (req, res, next) {
             callback(req, res, next)
                 .catch(next)
@@ -35,21 +35,21 @@ function errorHandler(callback) {
 app.use(bodyParser.json());
 app.use(morgan("combined"));
 app.use(cors());
-app.use(async(req, res, next) => {
+app.use(async (req, res, next) => {
     hubConfig = await getHub(identity);
-    models.rooms = new modelsFactory.Rooms(identity, hubConfig.client, gameThread, bree);
+    models.rooms = new modelsFactory.Rooms(identity, hubConfig.client, gameThreadString, bree);
     next();
 })
 
 // Create new room
-app.post("/rooms", errorHandler(async(req, res, next) => {
+app.post("/rooms", errorHandler(async (req, res, next) => {
     const playerId = hub.PrivateKey.fromString(req.body.playerId);
     const roomInfo = await models.rooms.createRoom(playerId.public.toString());
     res.json(roomInfo);
 }))
 
 // Join an existing room
-app.put("/rooms/:roomId", errorHandler(async(req, res, next) => {
+app.put("/rooms/:roomId", errorHandler(async (req, res, next) => {
     const playerId = hub.PrivateKey.fromString(req.body.playerId);
     const roomId = req.params.roomId;
     const roomInfo = await models.rooms.joinRoom(roomId, playerId);
@@ -57,16 +57,24 @@ app.put("/rooms/:roomId", errorHandler(async(req, res, next) => {
 }))
 
 // kill vote
-app.put("/rooms/:roomId/killVote", errorHandler(async(req, res, next) => {
+app.put("/rooms/:roomId/killVote", errorHandler(async (req, res, next) => {
     const playerId = hub.PrivateKey.fromString(req.body.playerId);
     const roomId = req.params.roomId;
     const victimId = req.body.victimId;
-    const threads = modelsFactory.threadLookUp.getThreads(hubConfig.client, gameThread, roomId)
+    const threads = modelsFactory.threadLookUp.getThreads(
+        hubConfig.client,
+        gameThreadString,
+        roomId
+    )
     const room = models.rooms.getRoom(roomId)
-    const player = modelsFactory.playerState.getPlayer(playerId.public.toString())
-    if(room.phase !== "NIGHT"){
+    const player = modelsFactory.playerState.getPlayer(
+        hubConfig.client,
+        threads.gameStateThread,
+        playerId.public.toString()
+    )
+    if (room.phase !== "NIGHT") {
         throw new Error("You can only kill during night!")
-    } else if (player.role !== "MAFIA"){
+    } else if (player.role !== "MAFIA") {
         throw new Error("Only mafia can kill a person")
     } else if (!player.isAlive) {
         throw new Error("Only alive mafia can kill")
@@ -84,14 +92,22 @@ app.put("/rooms/:roomId/killVote", errorHandler(async(req, res, next) => {
 }))
 
 // eject vote
-app.put("/rooms/:roomId/vote", errorHandler(async(req, res, next) => {
+app.put("/rooms/:roomId/vote", errorHandler(async (req, res, next) => {
     const playerId = hub.PrivateKey.fromString(req.body.playerId);
     const roomId = req.params.roomId;
     const victimId = req.body.victimId;
-    const threads = modelsFactory.threadLookUp.getThreads(hubConfig.client, gameThread, roomId)
+    const threads = modelsFactory.threadLookUp.getThreads(
+        hubConfig.client,
+        gameThreadString,
+        roomId
+    )
     const room = models.rooms.getRoom(roomId)
-    const player = modelsFactory.playerState.getPlayer(playerId.public.toString())
-    if(room.phase !== "VOTING"){
+    const player = modelsFactory.playerState.getPlayer(
+        hubConfig.client,
+        threads.gameStateThread,
+        playerId.public.toString()
+    )
+    if (room.phase !== "VOTING") {
         throw new Error("You can only vote during voting phase!")
     } else if (!player.isAlive) {
         throw new Error("Only alive player can vote")
@@ -109,16 +125,24 @@ app.put("/rooms/:roomId/vote", errorHandler(async(req, res, next) => {
 }))
 
 // inspect
-app.get("/rooms/:roomId/inspect", errorHandler(async(req, res, next) => {
+app.get("/rooms/:roomId/inspect", errorHandler(async (req, res, next) => {
     const playerId = hub.PrivateKey.fromString(req.query.playerId);
     const roomId = req.params.roomId;
     const victimId = req.query.victimId;
-    const threads = modelsFactory.threadLookUp.getThreads(hubConfig.client, gameThread, roomId)
+    const threads = modelsFactory.threadLookUp.getThreads(
+        hubConfig.client,
+        gameThreadString,
+        roomId
+    )
     const room = models.rooms.getRoom(roomId)
-    const player = modelsFactory.playerState.getPlayer(playerId.public.toString())
-    if(room.phase !== "NIGHT"){
+    const player = modelsFactory.playerState.getPlayer(
+        hubConfig.client,
+        threads.gameStateThread,
+        playerId.public.toString()
+    )
+    if (room.phase !== "NIGHT") {
         throw new Error("You can only inspect during night!")
-    } else if (player.role !== "DETECTIVE"){
+    } else if (player.role !== "DETECTIVE") {
         throw new Error("Only detective can inspect a person")
     } else if (!player.isAlive) {
         throw new Error("You need to be alive to inspect")
@@ -136,16 +160,24 @@ app.get("/rooms/:roomId/inspect", errorHandler(async(req, res, next) => {
 }))
 
 // Heal
-app.put("/rooms/:roomId/heal", errorHandler(async(req, res, next) => {
+app.put("/rooms/:roomId/heal", errorHandler(async (req, res, next) => {
     const playerId = hub.PrivateKey.fromString(req.body.playerId);
     const roomId = req.params.roomId;
     const victimId = req.body.victimId;
-    const threads = modelsFactory.threadLookUp.getThreads(hubConfig.client, gameThread, roomId)
+    const threads = modelsFactory.threadLookUp.getThreads(
+        hubConfig.client,
+        gameThreadString,
+        roomId
+    )
     const room = models.rooms.getRoom(roomId)
-    const player = modelsFactory.playerState.getPlayer(playerId.public.toString())
-    if(room.phase !== "NIGHT"){
+    const player = modelsFactory.playerState.getPlayer(
+        hubConfig.client,
+        threads.gameStateThread,
+        playerId.public.toString()
+    )
+    if (room.phase !== "NIGHT") {
         throw new Error("You can only heal during night!")
-    } else if (player.role !== "DOCTOR"){
+    } else if (player.role !== "DOCTOR") {
         throw new Error("Only doctor can heal a person")
     } else if (!player.isAlive) {
         throw new Error("You need to be alive to heal someone")
@@ -162,34 +194,45 @@ app.put("/rooms/:roomId/heal", errorHandler(async(req, res, next) => {
     }
 }))
 
-app.get("/rooms/:roomId/getRole", errorHandler(async(req, res, next) => {
-    const player = await modelsFactory.playerState.getPlayer(req.query.playerId)
+app.get("/rooms/:roomId/getRole", errorHandler(async (req, res, next) => {
+    const threads = await modelsFactory.threadLookUp.getThreads(
+        hubConfig.client,
+        gameThreadString,
+        req.params.roomId
+    )
+    const player = await modelsFactory.playerState.getPlayer(
+        hubConfig.client,
+        threads.gameStateThread,
+        req.query.playerId
+    )
     const payload = {role: player.role}
-    if(player.role === "MAFIA"){
-        const threads = await modelsFactory.threadLookUp.getThreads(hubConfig.client, gameThread, req.params.roomId)
+    if (player.role === "MAFIA") {
         payload.mafiaThread = threads.mafiaThread
     }
     res.json(payload)
 }))
 
-app.get("/rooms/:roomId", errorHandler(async(req, res, next) => {
+// todo: remove this when everything works perfectly!
+// ********************** development only! *************************
+app.get("/rooms/:roomId", errorHandler(async (req, res, next) => {
     await models.rooms.updateRoomPhase(req.params.roomId)
     res.send("success")
 }))
 
-app.delete("/rooms/:roomId", errorHandler(async(req, res, next) => {
+app.delete("/rooms/:roomId", errorHandler(async (req, res, next) => {
     bree.stop(req.params.roomId)
     res.send("success")
 }))
+//********************************************************************
 
-app.listen(process.env.PORT || 8000, "0.0.0.0", async function(){
+app.listen(process.env.PORT || 8000, "0.0.0.0", async function () {
     hubConfig = await getHub(identity);
     await modelsFactory.initCollections(
         hubConfig.client,
-        gameThread,
+        gameThreadString,
         [{name: "rooms"}, {name: "threadLookUp"}]
     );
-    models.rooms = new modelsFactory.Rooms(identity, hubConfig.client, gameThread, bree);
+    models.rooms = new modelsFactory.Rooms(identity, hubConfig.client, gameThreadString, bree);
     graceful.listen();
     bree.start();
 });

@@ -1,21 +1,25 @@
+const {ThreadID} = require("@textile/hub");
 const ethersUtils = require("ethers/lib/utils");
 const models = require(".");
 
-async function killVote(client, threadId, gamePhaseName, mafiaId, victimId){
+async function killVote(client, threadIdString, gamePhaseName, mafiaId, victimId){
+    const threadId = ThreadID.fromString(threadIdString)
     const timestamp = new Date().getTime();
     const _id = ethersUtils.id(`${mafiaId}-${victimId}`)
     const gameAction = {_id, action: "KILL_VOTE", to: victimId, from: mafiaId, time: timestamp}
     await client.create(threadId, gamePhaseName, [gameAction])
 }
 
-async function vote(client, threadId, gamePhaseName, playerId, victimId){
+async function vote(client, threadIdString, gamePhaseName, playerId, victimId){
+    const threadId = ThreadID.fromString(threadIdString)
     const timestamp = new Date().getTime();
     const _id = ethersUtils.id(`${playerId}-${victimId}`)
     const gameAction = {_id, action: "VOTE", to: victimId, from: playerId, time: timestamp}
     await client.create(threadId, gamePhaseName, [gameAction])
 }
 
-async function inspect(client, threadId, gamePhaseName, detectiveId, victimId){
+async function inspect(client, threadIdString, gamePhaseName, detectiveId, victimId){
+    const threadId = ThreadID.fromString(threadIdString)
     const timestamp = new Date().getTime();
     const _id = ethersUtils.id(`${detectiveId}-${victimId}`)
     const gameAction = {_id, action: "INSPECT", to: victimId, from: detectiveId, time: timestamp}
@@ -24,14 +28,16 @@ async function inspect(client, threadId, gamePhaseName, detectiveId, victimId){
     return player.role
 }
 
-async function heal(client, threadId, gamePhaseName, doctorId, victimId){
+async function heal(client, threadIdString, gamePhaseName, doctorId, victimId){
+    const threadId = ThreadID.fromString(threadIdString)
     const timestamp = new Date().getTime();
     const _id = ethersUtils.id(`${doctorId}-${victimId}`)
     const gameAction = {_id, action: "HEAL", to: victimId, from: doctorId, time: timestamp}
     await client.create(threadId, gamePhaseName, [gameAction])
 }
 
-async function nightResult(client, threadId, gamePhaseName){
+async function nightResult(client, threadIdString, gamePhaseName){
+    const threadId = ThreadID.fromString(threadIdString)
     const gameActions = await client.find(threadId, gamePhaseName, {})
     const mafiaVote = {}
     let healedPlayer
@@ -53,7 +59,8 @@ async function nightResult(client, threadId, gamePhaseName){
     }
 }
 
-async function dayResult(client, threadId, gamePhaseName){
+async function dayResult(client, threadIdString, gamePhaseName){
+    const threadId = ThreadID.fromString(threadIdString)
     const gameActions = await client.find(threadId, gamePhaseName, {})
     const votes = {}
     for(let gameAction of gameActions){
@@ -74,7 +81,8 @@ async function dayResult(client, threadId, gamePhaseName){
     }
 }
 
-async function checkWinningCondition(client, threadId){
+async function checkWinningCondition(client, threadIdString){
+    const threadId = ThreadID.fromString(threadIdString)
     const players = await client.find(threadId, "playerState", {})
     let noOfAliveMafia = 0
     let noOfAliveVillager = 0
